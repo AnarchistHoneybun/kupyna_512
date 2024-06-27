@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests;
+mod sub_units;
 
 const STATE_SIZE: usize = 1024;
 const HASH_SIZE: usize = 512;
@@ -43,6 +44,16 @@ fn divide_into_blocks(padded_message: &[u8], state_size: usize) -> Vec<&[u8]> {
     padded_message.chunks(state_size / 8).collect()
 }
 
+fn truncate(block: &[u8], n: usize) -> Vec<u8> {
+    let bytes_to_keep = n / 8;
+    let start_index = if block.len() > bytes_to_keep {
+        block.len() - bytes_to_keep
+    } else {
+        0
+    };
+    block[start_index..].to_vec()
+}
+
 pub fn hash(message: Vec<u8>, length: Option<usize>) -> Result<Vec<u8>, &'static str> {
     let mut message = message;
     let message_length: usize;
@@ -77,13 +88,14 @@ pub fn hash(message: Vec<u8>, length: Option<usize>) -> Result<Vec<u8>, &'static
 
     let blocks = divide_into_blocks(&padded_message, STATE_SIZE);
 
-    let mut init_vector: Vec<u8> = vec![0; 128];
+    let mut init_vector: Vec<u8> = vec![0; STATE_SIZE/8];
     init_vector[0] = 0x80; // set the first bit of this init vector to high
 
 
+    let fin_vector = sub_units::plant(blocks, &init_vector);
 
-    // Your hashing logic here
+    let hash = truncate(&fin_vector, HASH_SIZE);
 
-    Ok(Vec::new()) // Return an empty vector for now
+    Ok(hash)
 }
 
